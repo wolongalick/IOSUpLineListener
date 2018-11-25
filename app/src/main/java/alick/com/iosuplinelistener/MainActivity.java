@@ -2,9 +2,10 @@ package alick.com.iosuplinelistener;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.media.AudioManager;
-import android.media.SoundPool;
+import android.content.res.AssetFileDescriptor;
+import android.media.MediaPlayer;
 import android.os.CountDownTimer;
+import android.os.PowerManager;
 import android.os.Vibrator;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -17,7 +18,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -39,11 +41,13 @@ public class MainActivity extends AppCompatActivity {
 
     private long lastTs;
 
-    private static final int millisInFuture = 20 * 1000;
+    private static final int millisInFuture = 30 * 1000;
 
-    private SoundPool soundPool;
+    private MediaPlayer mediaPlayer;
 
     private boolean isHasReply;
+
+    private PowerManager.WakeLock mWakeLock;
 
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
@@ -58,6 +62,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onFinish() {
+            if(isHasReply){
+                notifyReply();
+            }
             lordJs();
         }
     };
@@ -89,7 +96,8 @@ public class MainActivity extends AppCompatActivity {
                 long currentTs = TimeUtils.parseStringToMillis(newTime, TimeUtils.format16);
                 if (lastTs > 0 && currentTs > lastTs) {
                     showDialog("傻逼苹果审核🐶给您回复了");
-                    MainActivity.this.notify2();
+                    isHasReply=true;
+                    MainActivity.this.notifyReply();
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -104,22 +112,34 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
                 showDialog(e.getMessage());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+//                            String call = "javascript:changeStartTime(\"" + time + "\")";
+//                            wvContent.loadUrl(call);
+                        customWebView.reload();
+                    }
+                });
             }
         }
     }
 
-    public void notify2() {
+    public void notifyReply() {
         Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
         long [] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
         vibrator.vibrate(pattern,0);
 
-        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
-            @Override
-            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
-                MainActivity.this.soundPool.play(1,1,1,0,0,1);
-            }
-        });
-        soundPool.play(1, 1, 1, 0, 0, 1);
+        try {
+            mediaPlayer.reset();
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.sound);
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(),file.getLength());
+            mediaPlayer.setLooping(true);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private String parseTime(String html) {
@@ -152,6 +172,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mediaPlayer = new MediaPlayer();
+
+        PowerManager powerManager = (PowerManager)getSystemService(POWER_SERVICE);
+        if (powerManager != null) {
+            mWakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "WakeLock");
+        }
         btn_find = findViewById(R.id.btn_find);
         tv_time=findViewById(R.id.tv_time);
         tv_countDown=findViewById(R.id.tv_countDown);
@@ -171,9 +198,6 @@ public class MainActivity extends AppCompatActivity {
                 btn_logined.setVisibility(View.GONE);
             }
         });
-
-        soundPool = new SoundPool(10, AudioManager.STREAM_SYSTEM, 5);
-        soundPool.load(this, R.raw.sound, 100);
 
         customWebView = findViewById(R.id.customWebView);
 
@@ -213,11 +237,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (mWakeLock != null) {
+            mWakeLock.acquire();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mWakeLock != null) {
+            mWakeLock.release();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(soundPool!=null){
+        if(mediaPlayer!=null){
             try {
-                soundPool.release();
+                mediaPlayer.release();
             } catch (Exception e) {
                 e.printStackTrace();
             }
