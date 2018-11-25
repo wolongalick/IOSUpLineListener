@@ -19,10 +19,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.lang.reflect.Method;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private final String url = "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/ng/app/1435725770/platform/ios/versions/828520779/resolutioncenter";
@@ -62,20 +58,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onFinish() {
-
-            
-            Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
-            long [] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
-            vibrator.vibrate(pattern,0);
-
-            soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
-                @Override
-                public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
-                    MainActivity.this.soundPool.play(1,1,1,0,0,1);
-                }
-            });
-            soundPool.play(1, 1, 1, 0, 0, 1);
-
             lordJs();
         }
     };
@@ -94,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 String newTime = parseTime(html);
 
                 BLog.i("完整的html:" + html);
-                Toast.makeText(getApplicationContext(), "时间:" + newTime, Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getApplicationContext(), "时间:" + newTime, Toast.LENGTH_SHORT).show();
 
                 final String finalNewTime = newTime;
                 runOnUiThread(new Runnable() {
@@ -107,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
                 long currentTs = TimeUtils.parseStringToMillis(newTime, TimeUtils.format16);
                 if (lastTs > 0 && currentTs > lastTs) {
                     showDialog("傻逼苹果审核🐶给您回复了");
+                    MainActivity.this.notify2();
                 } else {
                     runOnUiThread(new Runnable() {
                         @Override
@@ -123,6 +106,20 @@ public class MainActivity extends AppCompatActivity {
                 showDialog(e.getMessage());
             }
         }
+    }
+
+    public void notify2() {
+        Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+        long [] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
+        vibrator.vibrate(pattern,0);
+
+        soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int sampleId, int status) {
+                MainActivity.this.soundPool.play(1,1,1,0,0,1);
+            }
+        });
+        soundPool.play(1, 1, 1, 0, 0, 1);
     }
 
     private String parseTime(String html) {
@@ -201,7 +198,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-
 
         customWebView.loadUrl(url);
     }
