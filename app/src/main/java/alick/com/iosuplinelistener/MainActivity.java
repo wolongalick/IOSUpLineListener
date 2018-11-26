@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.PowerManager;
 import android.os.Vibrator;
@@ -55,14 +56,14 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    tv_countDown.setText(String.format("倒计时:%d", millisUntilFinished/1000));
+                    tv_countDown.setText(String.format("倒计时:%d", millisUntilFinished / 1000));
                 }
             });
         }
 
         @Override
         public void onFinish() {
-            if(isHasReply){
+            if (isHasReply) {
                 notifyReply();
             }
             lordJs();
@@ -96,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
                 long currentTs = TimeUtils.parseStringToMillis(newTime, TimeUtils.format16);
                 if (lastTs > 0 && currentTs > lastTs) {
                     showDialog("傻逼苹果审核🐶给您回复了");
-                    isHasReply=true;
+                    isHasReply = true;
                     MainActivity.this.notifyReply();
                 } else {
                     runOnUiThread(new Runnable() {
@@ -104,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
 //                            String call = "javascript:changeStartTime(\"" + time + "\")";
 //                            wvContent.loadUrl(call);
-                                customWebView.reload();
+                            customWebView.reload();
                         }
                     });
                 }
@@ -125,14 +126,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void notifyReply() {
-        Vibrator vibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
-        long [] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
-        vibrator.vibrate(pattern,0);
+        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        long[] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
+        vibrator.vibrate(pattern, 0);
 
         try {
             mediaPlayer.reset();
             AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.sound);
-            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(),file.getLength());
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
             mediaPlayer.setLooping(true);
             mediaPlayer.prepare();
             mediaPlayer.start();
@@ -175,14 +176,14 @@ public class MainActivity extends AppCompatActivity {
 
         mediaPlayer = new MediaPlayer();
 
-        PowerManager powerManager = (PowerManager)getSystemService(POWER_SERVICE);
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         if (powerManager != null) {
             mWakeLock = powerManager.newWakeLock(PowerManager.FULL_WAKE_LOCK, "WakeLock");
         }
         btn_find = findViewById(R.id.btn_find);
-        tv_time=findViewById(R.id.tv_time);
-        tv_countDown=findViewById(R.id.tv_countDown);
-        btn_logined=findViewById(R.id.btn_logined);
+        tv_time = findViewById(R.id.tv_time);
+        tv_countDown = findViewById(R.id.tv_countDown);
+        btn_logined = findViewById(R.id.btn_logined);
 
         btn_find.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -194,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
         btn_logined.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                customWebView.loadUrl(url);
+                loadMainUrl();
                 btn_logined.setVisibility(View.GONE);
             }
         });
@@ -216,13 +217,28 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                if(btn_logined.getVisibility()!=View.VISIBLE){
+                if (btn_logined.getVisibility() != View.VISIBLE) {
                     countDownTimer.cancel();
                     countDownTimer.start();
                 }
             }
+
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                customWebView.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        loadMainUrl();
+                    }
+                },3000);
+            }
         });
 
+        loadMainUrl();
+    }
+
+    private void loadMainUrl() {
         customWebView.loadUrl(url);
     }
 
@@ -255,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mediaPlayer!=null){
+        if (mediaPlayer != null) {
             try {
                 mediaPlayer.release();
             } catch (Exception e) {
