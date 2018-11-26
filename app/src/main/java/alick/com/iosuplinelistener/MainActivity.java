@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void getSource(String html) {
             try {
-                if(html.contains("App Store Connect") && !html.contains("解决方案中心")){
+                if(html.contains("保留所有权利") && !html.contains("解决方案中心")){
                     showDialog("提示", alertNeedRelogin);
                     notifyNeedRelogin();
                     return;
@@ -283,7 +283,19 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
                 if(alertNeedRelogin.equals(msg)){
-                    System.exit(0);
+                    /*try {
+                        if(vibrator!=null){
+                            vibrator.cancel();
+                        }
+                        if(mediaPlayer!=null && mediaPlayer.isPlaying()){
+                            mediaPlayer.stop();
+                        }
+                    } catch (IllegalStateException e) {
+                        e.printStackTrace();
+                    }*/
+                    if(alertNeedRelogin.equals(msg)){
+                        System.exit(0);
+                    }
                 }
             }
         }).show();
