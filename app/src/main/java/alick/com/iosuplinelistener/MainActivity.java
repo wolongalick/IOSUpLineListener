@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
-import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.PowerManager;
 import android.os.Vibrator;
@@ -50,6 +49,10 @@ public class MainActivity extends AppCompatActivity {
 
     private PowerManager.WakeLock mWakeLock;
 
+    private final String alertNeedRelogin ="请重新登录iOS账号";
+
+    private Vibrator vibrator;
+
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
         public void onTick(final long millisUntilFinished) {
@@ -81,6 +84,12 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void getSource(String html) {
             try {
+                if(html.contains("App Store Connect") && !html.contains("解决方案中心")){
+                    showDialog("提示", alertNeedRelogin);
+                    notifyNeedRelogin();
+                    return;
+                }
+
                 String newTime = parseTime(html);
 
                 BLog.i("完整的html:" + html);
@@ -96,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
                 long currentTs = TimeUtils.parseStringToMillis(newTime, TimeUtils.format16);
                 if (lastTs > 0 && currentTs > lastTs) {
-                    showDialog("傻逼苹果审核🐶给您回复了");
+                    showDialog("喜讯!","傻逼苹果审核🐶给您回复了");
                     isHasReply = true;
                     MainActivity.this.notifyReply();
                 } else {
@@ -112,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
                 lastTs = currentTs;
             } catch (Exception e) {
                 e.printStackTrace();
-                showDialog(e.getMessage());
+                showDialog("提示",e.getMessage());
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -125,10 +134,35 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void notifyReply() {
-        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+    /**
+     * 通知用户:需要重新登录
+     */
+    public void notifyNeedRelogin() {
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         long[] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
         vibrator.vibrate(pattern, 0);
+
+        try {
+            mediaPlayer.reset();
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_relogin);
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+            mediaPlayer.setLooping(true);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 通知用户:iOS来新的回复了
+     */
+    public void notifyReply() {
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        long[] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
+        vibrator.vibrate(pattern, 0);
+
+        vibrator.cancel();
 
         try {
             mediaPlayer.reset();
@@ -140,7 +174,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private String parseTime(String html) {
@@ -242,12 +275,24 @@ public class MainActivity extends AppCompatActivity {
         customWebView.loadUrl(url);
     }
 
-    private void showDialog(String str) {
+    private void showDialog(String title, final String msg) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("网页解析错误").setMessage(str).setCancelable(false).setNegativeButton("确定", new DialogInterface.OnClickListener() {
+        builder.setTitle(title).setMessage(msg).setCancelable(false).setNegativeButton("确定", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
+                if(alertNeedRelogin.equals(msg)){
+                    try {
+                        if(vibrator!=null){
+                            vibrator.cancel();
+                        }
+                        if(mediaPlayer!=null && mediaPlayer.isPlaying()){
+                            mediaPlayer.stop();
+                        }
+                    } catch (IllegalStateException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }).show();
     }
