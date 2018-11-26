@@ -50,9 +50,11 @@ public class MainActivity extends AppCompatActivity {
 
     private PowerManager.WakeLock mWakeLock;
 
-    private final String alertNeedRelogin ="请关闭app并重新打开";
+    private final String alertNeedRelogin = "请关闭app并重新打开";
 
     private Vibrator vibrator;
+
+    private AlertDialog alertDialog;
 
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
@@ -74,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
     private void lordJs() {
         customWebView.loadUrl("javascript:window.java_obj.getSource(document.documentElement.outerHTML);void(0)");
     }
@@ -85,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void getSource(String html) {
             try {
-                if(html.contains("保留所有权利") && !html.contains("解决方案中心")){
+                if (html.contains("保留所有权利") && !html.contains("解决方案中心")) {
                     showDialog("提示", alertNeedRelogin);
                     notifyNeedRelogin();
                     return;
@@ -106,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
                 long currentTs = TimeUtils.parseStringToMillis(newTime, TimeUtils.format16);
                 if (lastTs > 0 && currentTs > lastTs) {
-                    showDialog("喜讯!","傻逼苹果审核🐶给您回复了");
+                    showDialog("喜讯!", "傻逼苹果审核🐶给您回复了");
                     isHasReply = true;
                     MainActivity.this.notifyReply();
                 } else {
@@ -115,6 +118,9 @@ public class MainActivity extends AppCompatActivity {
                         public void run() {
 //                            String call = "javascript:changeStartTime(\"" + time + "\")";
 //                            wvContent.loadUrl(call);
+                            if(alertDialog!=null && alertDialog.isShowing()){
+                                alertDialog.dismiss();
+                            }
                             customWebView.reload();
                         }
                     });
@@ -122,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                 lastTs = currentTs;
             } catch (Exception e) {
                 e.printStackTrace();
-                showDialog("提示",e.getMessage());
+                showDialog("提示", e.getMessage());
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -265,7 +271,7 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         loadMainUrl();
                     }
-                },3000);
+                }, 3000);
             }
         });
 
@@ -277,12 +283,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showDialog(String title, final String msg) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle(title).setMessage(msg).setCancelable(false).setNegativeButton("确定", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-                if(alertNeedRelogin.equals(msg)){
+        alertDialog = new AlertDialog.Builder(this).setTitle(title)
+                .setMessage(msg)
+                .setCancelable(false)
+                .setNegativeButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        if (alertNeedRelogin.equals(msg)) {
                     /*try {
                         if(vibrator!=null){
                             vibrator.cancel();
@@ -293,12 +301,12 @@ public class MainActivity extends AppCompatActivity {
                     } catch (IllegalStateException e) {
                         e.printStackTrace();
                     }*/
-                    if(alertNeedRelogin.equals(msg)){
-                        System.exit(0);
+                            if (alertNeedRelogin.equals(msg)) {
+                                System.exit(0);
+                            }
+                        }
                     }
-                }
-            }
-        }).show();
+                }).show();
     }
 
     @Override
@@ -332,7 +340,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if(keyCode == KeyEvent.KEYCODE_BACK){
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
             Intent intent = new Intent(Intent.ACTION_MAIN);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.addCategory(Intent.CATEGORY_HOME);
