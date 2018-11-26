@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
     private PowerManager.WakeLock mWakeLock;
 
-    private final String alertNeedRelogin ="请重新登录iOS账号";
+    private final String alertNeedRelogin ="请关闭app并重新打开";
 
     private Vibrator vibrator;
 
@@ -283,16 +283,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 dialog.dismiss();
                 if(alertNeedRelogin.equals(msg)){
-                    try {
-                        if(vibrator!=null){
-                            vibrator.cancel();
-                        }
-                        if(mediaPlayer!=null && mediaPlayer.isPlaying()){
-                            mediaPlayer.stop();
-                        }
-                    } catch (IllegalStateException e) {
-                        e.printStackTrace();
-                    }
+                    System.exit(0);
                 }
             }
         }).show();
