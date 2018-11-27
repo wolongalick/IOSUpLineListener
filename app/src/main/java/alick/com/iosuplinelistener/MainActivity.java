@@ -27,6 +27,10 @@ public class MainActivity extends AppCompatActivity {
     private final String url = "https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/ra/ng/app/1435725770/platform/ios/versions/828520779/resolutioncenter";
 //    private final String url = "https://www.baidu.com";
 
+    private final String LOGIN_URL="https://appstoreconnect.apple.com/login";
+    private final String DEFAULT_ERROR_URL="https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/wa/defaultError";
+
+
     private Button btn_find;
     private CustomWebView customWebView;
     private TextView tv_time;
@@ -51,10 +55,13 @@ public class MainActivity extends AppCompatActivity {
     private PowerManager.WakeLock mWakeLock;
 
     private final String alertNeedRelogin = "请关闭app并重新打开";
+    private final String alertCleanCache = "请关闭app,清除应用数据并重新打开";
 
     private Vibrator vibrator;
 
     private AlertDialog alertDialog;
+
+    private String currentUrl;
 
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
@@ -88,10 +95,18 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void getSource(String html) {
             try {
-                if (html.contains("保留所有权利") && !html.contains("解决方案中心")) {
-                    showDialog("提示", alertNeedRelogin);
-                    notifyNeedRelogin();
-                    return;
+                BLog.i("当前url:"+currentUrl);
+
+                if(!TextUtils.isEmpty(currentUrl)){
+                    if(currentUrl.startsWith(LOGIN_URL)){
+                        showDialog("提示", alertNeedRelogin);
+                        notifyNeedRelogin();
+                        return;
+                    }else if(currentUrl.startsWith(DEFAULT_ERROR_URL)){
+                        showDialog("提示", alertCleanCache);
+                        notifyCleanCache();
+                        return;
+                    }
                 }
 
                 String newTime = parseTime(html);
@@ -160,6 +175,29 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 通知用户:需要重新登录
+     */
+    public void notifyCleanCache() {
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        long[] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
+        vibrator.vibrate(pattern, 0);
+
+        try {
+            mediaPlayer.reset();
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_relogin);
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+            mediaPlayer.setLooping(true);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
 
     /**
      * 通知用户:iOS来新的回复了
@@ -257,6 +295,8 @@ public class MainActivity extends AppCompatActivity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
+                MainActivity.this.currentUrl=url;
+
                 if (btn_logined.getVisibility() != View.VISIBLE) {
                     countDownTimer.cancel();
                     countDownTimer.start();
@@ -290,20 +330,8 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        if (alertNeedRelogin.equals(msg)) {
-                    /*try {
-                        if(vibrator!=null){
-                            vibrator.cancel();
-                        }
-                        if(mediaPlayer!=null && mediaPlayer.isPlaying()){
-                            mediaPlayer.stop();
-                        }
-                    } catch (IllegalStateException e) {
-                        e.printStackTrace();
-                    }*/
-                            if (alertNeedRelogin.equals(msg)) {
-                                System.exit(0);
-                            }
+                        if (alertNeedRelogin.equals(msg) || alertCleanCache.equals(msg)) {
+                            System.exit(0);
                         }
                     }
                 }).show();
