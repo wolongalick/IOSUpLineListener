@@ -15,6 +15,7 @@ import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
@@ -56,12 +57,17 @@ public class MainActivity extends AppCompatActivity {
 
     private final String alertNeedRelogin = "请关闭app并重新打开";
     private final String alertCleanCache = "请关闭app,清除应用数据并重新打开";
+    private final String alertNetException = "请检查网络后重试";
 
     private Vibrator vibrator;
 
     private AlertDialog alertDialog;
 
     private String currentUrl;
+
+    private final int continuousFailCountMax=5;
+
+    private int continuousFailCount;    //连续请求失败的次数
 
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
@@ -110,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 String newTime = parseTime(html);
+                continuousFailCount=0;//重置连续失败次数
 
                 BLog.i("完整的html:" + html);
 //                Toast.makeText(getApplicationContext(), "时间:" + newTime, Toast.LENGTH_SHORT).show();
@@ -166,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             mediaPlayer.reset();
-            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_relogin);
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_exception);
             mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
             mediaPlayer.setLooping(true);
             mediaPlayer.prepare();
@@ -186,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             mediaPlayer.reset();
-            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_relogin);
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_exception);
             mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
             mediaPlayer.setLooping(true);
             mediaPlayer.prepare();
@@ -195,9 +202,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-
-
-
 
     /**
      * 通知用户:iOS来新的回复了
@@ -220,6 +224,29 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    /**
+     * 通知用户:网络异常
+     */
+    public void notifyNetException() {
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        long[] pattern = {800, 500, 400, 300};   // 停止 开启 停止 开启
+        vibrator.vibrate(pattern, 0);
+
+        vibrator.cancel();
+
+        try {
+            mediaPlayer.reset();
+            AssetFileDescriptor file = getResources().openRawResourceFd(R.raw.need_exception);
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+            mediaPlayer.setLooping(true);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private String parseTime(String html) {
         int sendFromApplyIndex = html.indexOf("发件人 Apple");
@@ -282,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 把刚才的接口类注册到名为HTMLOUT的JavaScript接口
         customWebView.addJavascriptInterface(new InJavaScriptLocalObj(), "java_obj");
-
+        customWebView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 
         customWebView.setWebViewClient(new WebViewClient() {
             @Override
@@ -303,15 +330,24 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
-                customWebView.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        loadMainUrl();
-                    }
-                }, 3000);
+                continuousFailCount++;//增加一次失败次数
+
+                if(continuousFailCount<continuousFailCountMax){
+                    customWebView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            loadMainUrl();
+                        }
+                    }, 3000);
+                }else {
+                    //当连续失败次数达到上限时,给出提示
+                    showDialog("提示", alertNetException);
+                    notifyNetException();
+                }
             }
         });
 
@@ -330,7 +366,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        if (alertNeedRelogin.equals(msg) || alertCleanCache.equals(msg)) {
+                        if (alertNeedRelogin.equals(msg) || alertCleanCache.equals(msg) || alertNetException.equals(msg)) {
                             System.exit(0);
                         }
                     }
@@ -377,4 +413,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return super.onKeyDown(keyCode, event);
     }
+
+
 }
