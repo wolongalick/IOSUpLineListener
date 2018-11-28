@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
 //    private final String url = "https://www.baidu.com";
 
     private final String LOGIN_URL="https://appstoreconnect.apple.com/login";
-    private final String DEFAULT_ERROR_URL="https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/wa/defaultError";
+    private final String CAN_NOT_HANDLE_REQUEST ="https://appstoreconnect.apple.com/WebObjects/iTunesConnect.woa/wa/defaultError";
 
 
     private Button btn_find;
@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private final String alertNeedRelogin = "请关闭app并重新打开";
     private final String alertCleanCache = "请关闭app,清除应用数据并重新打开";
     private final String alertNetException = "请检查网络后重试";
+    private final String alertCanNotHandleRequest = "无法处理您的请求,请关闭app重新打开";
 
     private Vibrator vibrator;
 
@@ -65,9 +66,12 @@ public class MainActivity extends AppCompatActivity {
 
     private String currentUrl;
 
-    private final int continuousFailCountMax=5;
+    private final int failCountMax =3;                  //请求失败的次数上限
+    private final int canNotHandleRequestCountMax =3;   //无法请求的次数上限
 
-    private int continuousFailCount;    //连续请求失败的次数
+    private int failCount;                              //请求失败的次数
+
+    private int canNotHandleRequestCount;               //无法请求的次数
 
     private CountDownTimer countDownTimer = new CountDownTimer(millisInFuture, 1000) {
         @Override
@@ -108,15 +112,20 @@ public class MainActivity extends AppCompatActivity {
                         showDialog("提示", alertNeedRelogin);
                         notifyNeedRelogin();
                         return;
-                    }else if(currentUrl.startsWith(DEFAULT_ERROR_URL)){
-                        showDialog("提示", alertCleanCache);
-                        notifyCleanCache();
-                        return;
+                    }else if(currentUrl.startsWith(CAN_NOT_HANDLE_REQUEST)){
+                        canNotHandleRequestCount++;
+                        if(canNotHandleRequestCount > canNotHandleRequestCountMax){
+                            showDialog("提示", alertCanNotHandleRequest);
+                            notifyCleanCache();
+                            return;
+                        }
+                    }else {
+                        canNotHandleRequestCount=0;//重置次数
                     }
                 }
 
                 String newTime = parseTime(html);
-                continuousFailCount=0;//重置连续失败次数
+                failCount =0;//重置连续失败次数
 
                 BLog.i("完整的html:" + html);
 //                Toast.makeText(getApplicationContext(), "时间:" + newTime, Toast.LENGTH_SHORT).show();
@@ -334,9 +343,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                 super.onReceivedError(view, errorCode, description, failingUrl);
-                continuousFailCount++;//增加一次失败次数
+                failCount++;//增加一次失败次数
 
-                if(continuousFailCount<continuousFailCountMax){
+                if(failCount < failCountMax){
                     customWebView.postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -366,7 +375,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        if (alertNeedRelogin.equals(msg) || alertCleanCache.equals(msg) || alertNetException.equals(msg)) {
+                        if (alertNeedRelogin.equals(msg) || alertCleanCache.equals(msg) || alertNetException.equals(msg) || alertCanNotHandleRequest.equals(msg)) {
                             System.exit(0);
                         }
                     }
