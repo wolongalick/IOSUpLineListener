@@ -265,6 +265,7 @@ public class MainActivity extends AppCompatActivity {
         String time = content.substring(content.indexOf(before), content.indexOf(after));
 
         String newTime = time;
+//        newTime="2018年11月29日 下午12:43";
         //2018年11月25日 上午2:48
         if (!TextUtils.isEmpty(time)) {
             if (time.contains("上午")) {
@@ -274,8 +275,11 @@ public class MainActivity extends AppCompatActivity {
                 int index1 = time.indexOf("下午");
                 int index2 = time.indexOf(":");
                 String hourStr = time.substring(index1 + ("下午".length()), index2);
-                int hour = Integer.parseInt(hourStr) + 12;
-
+                int i = Integer.parseInt(hourStr);
+                if(i==12){
+                    i=0;
+                }
+                int hour = i + 12;
                 newTime = time.substring(0, index1 + ("下午".length())) + hour + time.substring(index2, time.length());
                 newTime = newTime.replace("下午", "");
             }
